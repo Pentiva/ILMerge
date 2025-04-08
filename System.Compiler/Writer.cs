@@ -309,7 +309,7 @@ namespace System.Compiler{
     private TrivialHashtable/*!*/ typeRefIndex = new TrivialHashtable();
     private TypeNodeList/*!*/ typeRefEntries = new TypeNodeList();
     private TrivialHashtable/*!*/ typeSpecIndex = new TrivialHashtable();
-    private TrivialHashtable/*!*/ structuralTypeSpecIndexFor = new TrivialHashtable();
+    private TrivialHashtable2/*!*/ structuralTypeSpecIndexFor = new TrivialHashtable2();
     private TypeNodeList/*!*/ typeSpecEntries = new TypeNodeList();
     private TrivialHashtable/*!*/ typeParameterNumber = new TrivialHashtable();
     private BinaryWriter/*!*/ userStringHeap = new BinaryWriter(new MemoryStream(), System.Text.Encoding.Unicode);
@@ -1389,11 +1389,11 @@ namespace System.Compiler{
       return (int)index;
     }
     int GetTypeSpecIndex(TypeNode/*!*/ type) {
-      int structuralKey = type.UniqueKey;
+      uint structuralKey = (uint) type.UniqueKey;
       int blobIndex = 0;
       if (type.Template != null){
-        blobIndex = this.GetBlobIndex(type);
-        structuralKey = ((type.Template.UniqueKey << 8)&int.MaxValue) + blobIndex;
+        blobIndex     = this.GetBlobIndex(type);
+        structuralKey = (uint) (((type.Template.UniqueKey << 8)&int.MaxValue) + blobIndex);
       }
       Object index = this.typeSpecIndex[type.UniqueKey];
       if (index == null){

@@ -1943,6 +1943,121 @@ namespace System.Compiler{
 #endif
 }
   
+  public sealed class TrivialHashtable2{
+    struct HashEntry {
+      public uint Key;
+      public object Value;
+    }
+    const int InitialSize = 4;
+
+    private HashEntry[]/*!*/ entries;
+    private int count;
+
+    public TrivialHashtable2(){
+      this.entries = new HashEntry[InitialSize];
+      //this.count = 0;
+    }
+    private TrivialHashtable2(HashEntry[]/*!*/ entries, int count) {
+      this.entries = entries;
+      this.count = count;
+    }
+    public TrivialHashtable2(int expectedEntries) {
+      int initialSize = 16;
+      expectedEntries <<= 1;
+      while (initialSize < expectedEntries && initialSize > 0) initialSize <<= 1;
+      if (initialSize < 0) initialSize = InitialSize;
+      this.entries = new HashEntry[initialSize];
+      //this.count = 0;
+    }
+    public int Count{
+      get{
+        return this.count;
+      }
+    }
+    private void Expand(){
+      HashEntry[] oldEntries = this.entries;
+      int n = oldEntries.Length;
+      int m = n*2;
+      if (m <= 0) return;
+      HashEntry[] entries = new HashEntry[m];
+      int count = 0;
+      for (int i = 0; i < n; i++){
+        uint key = oldEntries[i].Key;
+        if (key <= 0) continue; //No entry (0) or deleted entry (-1)
+        object value = oldEntries[i].Value;
+        Debug.Assert(value != null);
+        uint j = (uint)(key & (m-1));
+        uint k = entries[j].Key;
+        while (true){
+          if (k == 0){
+            entries[j].Value = value;
+            entries[j].Key = key;
+            count++;
+            break;
+          }
+          j++; if (j >= m) j = 0;
+          k = entries[j].Key;
+        }
+      }
+      this.entries = entries;
+      this.count = count;
+    }
+    public object this[uint key]{
+      get{
+        if (key <= 0) throw new ArgumentException(ExceptionStrings.KeyNeedsToBeGreaterThanZero, "key");
+        HashEntry[] entries = this.entries;
+        int n = entries.Length;
+        uint i = (uint)(key & (n-1));
+        uint k = entries[i].Key;
+        object result = null;
+        while (true){
+          if (k == key){result = entries[i].Value; break;}
+          if (k == 0) break;
+          i++; if (i >= n) i = 0;
+          k = entries[i].Key;
+        }
+        return result;
+      }
+      set{
+        if (key <= 0) throw new ArgumentException(ExceptionStrings.KeyNeedsToBeGreaterThanZero, "key");
+        HashEntry[] entries = this.entries;
+        int n = entries.Length;
+        uint i = (uint)(key & (n-1));
+        uint k = entries[i].Key;
+        while(true){
+          if (k == key || k == 0){
+            entries[i].Value = value;
+            if (k == 0){
+              if (value == null){return;}
+              entries[i].Key = key;
+              if (++this.count > n/2) this.Expand();
+              return;
+            }
+            if (value == null) entries[i].Key = uint.MaxValue;
+            return;
+          }
+          i++; if (i >= n) i = 0;
+          k = entries[i].Key;
+        }
+      }
+    }
+    public IEnumerable Values
+    {
+      get
+      {
+        for (int i = 0; i < entries.Length; i++)
+        {
+          if (entries[i].Key != 0) yield return entries[i].Value;
+        }
+      }
+    }
+    public TrivialHashtable2 Clone(){
+	  HashEntry[] clonedEntries = (HashEntry[]) this.entries.Clone();
+      //^ assume clonedEntries != null;
+      return new TrivialHashtable2(clonedEntries, this.count);
+	}
+  }
+
   public sealed class TrivialHashtable{
     struct HashEntry {
       public int Key;
